@@ -1,0 +1,1 @@
+"0","plot(LSDV$fitted.values, LSDV$model$Land_Based_Precip)"

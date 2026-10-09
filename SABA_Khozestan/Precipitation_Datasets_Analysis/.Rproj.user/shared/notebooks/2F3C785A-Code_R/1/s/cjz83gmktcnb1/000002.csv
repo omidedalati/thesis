@@ -1,0 +1,5 @@
+"0",""
+"0","geeID <- read.csv(file = ""dataset/Land_Based_Datasets/GIS/Land_Based_Stations.csv"") %>% "
+"0","  select(Station, LAT, LONG, ELEV_SRTM3, ASPECT_SRTM3, SLOPE_SRTM3)"
+"0",""
+"0","geeID"

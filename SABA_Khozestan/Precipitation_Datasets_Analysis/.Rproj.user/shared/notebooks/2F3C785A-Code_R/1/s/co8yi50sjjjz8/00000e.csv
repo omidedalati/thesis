@@ -1,0 +1,2 @@
+"0",""
+"0","plot(LSDV$fitted.values, LSDV$model$Land_Based_Precip, xlim = c(0, 500), ylim = c(0, 500))"

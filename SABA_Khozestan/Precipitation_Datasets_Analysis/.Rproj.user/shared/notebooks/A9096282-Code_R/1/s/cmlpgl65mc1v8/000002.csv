@@ -1,0 +1,21 @@
+"0",""
+"0","library(package = ""dplyr"")"
+"0","library(package = ""plm"")"
+"0","library(package = ""stringi"")"
+"0","library(package = ""ggplot2"")"
+"0","library(package = ""tidyr"")"
+"0",""
+"0","library(package = ""cluster"")"
+"0","library(package = ""factoextra"")"
+"2","Welcome! Want to learn more? See two factoextra-related books at https://goo.gl/ve3WBa
+"
+"0","library(package = ""magrittr"")"
+"2","
+Attaching package: ‘magrittr’
+
+"
+"2","The following object is masked from ‘package:tidyr’:
+
+    extract
+
+"

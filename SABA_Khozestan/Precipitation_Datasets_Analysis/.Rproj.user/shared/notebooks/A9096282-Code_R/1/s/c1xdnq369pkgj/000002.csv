@@ -1,0 +1,7 @@
+"0",""
+"0","ST <- c(""ABADAN"", ""ALIGUDARZ"")"
+"0",""
+"0","Test <- data %>% filter(Station %in% ST)"
+"0",""
+"0","Train <- data %>% filter(!(Station %in% ST))"
+"0",""

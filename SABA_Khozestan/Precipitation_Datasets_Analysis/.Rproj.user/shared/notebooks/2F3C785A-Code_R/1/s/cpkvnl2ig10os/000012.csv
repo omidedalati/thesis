@@ -1,0 +1,6 @@
+"0",""
+"0","df %>% filter(Station == ""ALIGUDARZ"") %>% "
+"0","  ggplot() +"
+"0","  geom_point(mapping = aes(x=as.factor(Date), y=Land_Based_Precip)) +"
+"0","  geom_point(mapping = aes(x=as.factor(Date), y=Panel_Data_Precip), color=""red"")"
+"0",""

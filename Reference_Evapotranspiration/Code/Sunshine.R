@@ -1,0 +1,38 @@
+
+# Initial Setting -----------------------------------------------------------------------------
+
+rm(list = ls())
+
+library(package = "dplyr")
+library(package = "lubridate")
+library(package = "ggplot2")
+library(package = "clipr")
+library(package = "tidyr")
+
+# Load Data -----------------------------------------------------------------------------------
+
+ST <- c("407450-99999")
+
+RBSN_PERSIAN <- readRDS(file = "Result/RBSN_Dataset_Khorasan_Daily_1959_2018.rds") %>% 
+    filter(STNID %in% ST) %>% 
+    filter(YEAR >= 1368 & YEAR <= 1396)
+
+
+# Part 01
+
+data <- RBSN_PERSIAN %>%
+select(YEAR, MONTH, DAY, sshn) %>% 
+    spread(key = MONTH, value = sshn)
+
+write_clip(content = data)
+
+# Part 02
+data <- RBSN_PERSIAN %>%
+    select(YEAR, MONTH, DAY, sshn) %>% 
+    group_by(YEAR) %>% 
+    summarise(sshn = ifelse(test = sum(is.na(sshn)) > 60,
+                            yes = NA,
+                            no = mean(x = sshn, na.rm = TRUE)))
+
+write_clip(content = data)
+

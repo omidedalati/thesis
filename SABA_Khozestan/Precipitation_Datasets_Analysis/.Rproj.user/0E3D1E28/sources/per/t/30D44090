@@ -1,0 +1,27 @@
+{
+    "id": "30D44090",
+    "path": "C:/Users/POOYA/Dropbox/Work/Hydrotech/SABA_Khozestan/Precipitation_Datasets_Analysis/Yearly_Analysis.Rmd",
+    "project_path": "Yearly_Analysis.Rmd",
+    "type": "r_markdown",
+    "hash": "558744234",
+    "contents": "",
+    "dirty": false,
+    "created": 1615964403204.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "chunk_output_type": "inline",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "122,0",
+        "scrollLine": "120"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1615971142,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1615971143013,
+    "read_only": false,
+    "read_only_alternatives": []
+}

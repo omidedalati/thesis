@@ -1,0 +1,186 @@
+
+---
+title: "Precipitation Datasets Analysis"
+output: html_notebook
+---
+
+
+
+# Load Library:
+
+```{r}
+
+library(package = "dplyr")
+library(package = "plm")
+library(package = "stringi")
+library(package = "ggplot2")
+
+```
+
+
+# Load Precipitation Data:
+
+```{r}
+
+Precip <- read.csv(file = "result/Precip_Data_Monthly.csv", header = TRUE)
+
+Precip <- Precip %>% 
+  filter(Year >= 1380 & Year <= 1394) %>% 
+  filter(!(Year == 1380 & Month <= 06)) %>% 
+  filter(!(Year == 1394 & Month >= 07))
+
+Precip <- Precip %>% 
+  mutate_at(.vars = vars(ends_with("_Precip")), .funs = list(~ round(x = ., digits = 1)))
+
+Precip
+
+```
+
+
+
+# Create Water Year Precipitation
+
+```{r}
+
+Precip <- Precip %>%
+  mutate(Water_Year = if_else(
+    condition = Month >= 7,
+    true = paste(substr(x = as.character(x = Year),
+                        start = 3,
+                        stop = 4),
+                 substr(x = as.character(x = Year + 1),
+                        start = 3,
+                        stop = 4),
+                 sep = "-"),
+    false = paste(substr(x = as.character(x = Year - 1),
+                        start = 3,
+                        stop = 4),
+                 substr(x = as.character(x = Year),
+                        start = 3,
+                        stop = 4),
+                 sep = "-"))
+  )
+
+Precip_Water_Year <- Precip %>% 
+  group_by(Station, Water_Year) %>% 
+  summarise(
+    Land_Based_Precip = sum(Land_Based_Precip, na.rm = TRUE),
+    ERA5_Precip = sum(ERA5_Precip, na.rm = TRUE),
+    ERA5_Land_Precip = sum(ERA5_Land_Precip, na.rm = TRUE),
+    WaPOR_Precip = sum(WaPOR_Precip, na.rm = TRUE),
+    PERSIANN_CDR_Precip = sum(PERSIANN_CDR_Precip, na.rm = TRUE),
+    CHIRPS_Precip = sum(CHIRPS_Precip, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+
+```
+
+
+
+# Load geeID:
+
+```{r}
+
+geeID <- read.csv(file = "dataset/Land_Based_Datasets/GIS/Land_Based_Stations.csv") %>% 
+  select(Station, LAT, LONG, ELEV_SRTM3, ASPECT_SRTM3, SLOPE_SRTM3)
+
+geeID
+
+```
+
+
+
+# Combine Precipitaion Data And geeID Data
+
+```{r}
+
+data <- Precip_Water_Year %>% 
+  left_join(y = geeID, by = "Station")
+
+data <- data %>% 
+  mutate(Date = Year * 100 + Month)
+
+data
+
+```
+
+
+
+# Train & Test
+
+```{r}
+
+ST <- c("ARAB HASAN - ASAD", "ALIGUDARZ")
+
+Test <- data %>% filter(Station %in% ST)
+
+Train <- data %>% filter(!(Station %in% ST))
+
+```
+
+
+# Panel Data Model
+
+```{r}
+
+pData <- pdata.frame(x = Train, index = c("Station", "Date"))
+
+Model_01 <- plm(
+  formula = Land_Based_Precip ~ ERA5_Precip + ERA5_Land_Precip + PERSIANN_CDR_Precip
+ + CHIRPS_Precip - 1,
+ data = pData,
+ effect = "twoways",
+ model = "within",
+ )
+
+summary(Model_01)
+
+```
+
+# LSDV Model of Panel Data Estimation
+
+```{r}
+
+LSDV <- lm(formula = Land_Based_Precip ~ ERA5_Precip + ERA5_Land_Precip + PERSIANN_CDR_Precip +  CHIRPS_Precip + ELEV_SRTM3 + ASPECT_SRTM3 + SLOPE_SRTM3 + LAT + LONG - 1,
+           data = Train)
+
+Coeff = data.frame(LSDV$coefficients)
+colnames(Coeff) <- "Coeff" 
+
+summary(LSDV)
+
+```
+
+```{r}
+
+hydroGOF::gof(sim = LSDV$fitted.values, obs = LSDV$model$Land_Based_Precip)
+
+```
+
+
+```{r}
+
+Test <- Test %>% 
+  mutate(Ensemble_Model = ERA5_Precip * Coeff['ERA5_Precip', 'Coeff'] +
+           ERA5_Land_Precip * Coeff['ERA5_Land_Precip', 'Coeff'] +
+           PERSIANN_CDR_Precip * Coeff['PERSIANN_CDR_Precip', 'Coeff'] +
+           CHIRPS_Precip * Coeff['CHIRPS_Precip', 'Coeff'] +
+           ELEV_SRTM3 * Coeff['ELEV_SRTM3', 'Coeff'] +
+           ASPECT_SRTM3 * Coeff['ASPECT_SRTM3', 'Coeff'] +
+           SLOPE_SRTM3 * Coeff['SLOPE_SRTM3', 'Coeff'] +
+           LAT * Coeff['LAT', 'Coeff'] +
+           LONG * Coeff['LONG', 'Coeff'])
+
+
+
+Test %>% 
+  ggplot() +
+  geom_line(mapping = aes(x = Water_Year, y = Land_Based_Precip)) +
+  facet_wrap(.~Station)
+  
+
+
+
+```
+

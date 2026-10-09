@@ -1,0 +1,208 @@
+---
+title: "Precipitation Datasets Analysis"
+output: html_notebook
+---
+
+# Load Library:
+
+```{r}
+
+library(package = "dplyr")
+library(package = "plm")
+library(package = "stringi")
+library(package = "ggplot2")
+library(package = "tidyr")
+
+library(package = "cluster")
+library(package = "factoextra")
+library(package = "magrittr")
+
+```
+
+# Load Precipitation Data:
+
+```{r}
+
+Precip <- read.csv(file = "result/Precip_Data_Monthly.csv", header = TRUE)
+
+Precip <- Precip %>% 
+  filter(Year >= 1380 & Year <= 1394) %>% 
+  filter(!(Year == 1380 & Month <= 06)) %>% 
+  filter(!(Year == 1394 & Month >= 07))
+
+Precip <- Precip %>% 
+  mutate_at(.vars = vars(ends_with("_Precip")), .funs = list(~ round(x = ., digits = 1)))
+
+Precip
+
+```
+
+# Create Water Year Precipitation
+
+```{r}
+
+Precip <- Precip %>%
+  mutate(Water_Year = if_else(
+    condition = Month >= 7,
+    true = paste(substr(x = as.character(x = Year),
+                        start = 3,
+                        stop = 4),
+                 substr(x = as.character(x = Year + 1),
+                        start = 3,
+                        stop = 4),
+                 sep = "-"),
+    false = paste(substr(x = as.character(x = Year - 1),
+                        start = 3,
+                        stop = 4),
+                 substr(x = as.character(x = Year),
+                        start = 3,
+                        stop = 4),
+                 sep = "-"))
+  )
+
+```
+
+# Load geeID:
+
+```{r}
+
+geeID <- read.csv(file = "dataset/Land_Based_Datasets/GIS/Land_Based_Stations.csv") %>% 
+  select(Station, LAT, LONG, ELEV_SRTM3, ASPECT_SRTM3, SLOPE_SRTM3)
+
+geeID
+
+```
+
+# Combine Precipitaion Data And geeID Data
+
+```{r}
+
+data <- Precip %>% 
+  left_join(y = geeID, by = "Station")
+
+data <- data %>% 
+  mutate(Date = Year * 100 + Month)
+
+data
+
+```
+
+```{r}
+
+data_clustring_scale <- data %>%
+  group_by(Month) %>% 
+  summarise(Land_Based_Precip = median(x = Land_Based_Precip, na.rm = TRUE)) %>% 
+  na.omit() %>%
+  scale()
+
+fviz_nbclust(data_clustring_scale, kmeans, method = "gap_stat")
+
+```
+
+```{r}
+
+data_clustring <- data %>%
+  group_by(Month) %>% 
+  summarise(Land_Based_Precip = median(x = Land_Based_Precip, na.rm = TRUE))
+
+data_clustring_hc <- data_clustring %>%
+  scale() %>%
+  dist(method = "euclidean") %>% 
+  hclust(method = "ward.D2")
+
+fviz_dend(data_clustring_hc,
+          k = 2,
+          cex = 0.5,
+          k_colors = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+          color_labels_by_k = TRUE,
+          rect = TRUE)
+
+```
+
+# Train & Test
+
+```{r}
+
+ST <- c("ABADAN", "ALIGUDARZ")
+
+Test <- data %>% filter(Station %in% ST)
+
+Train <- data %>% filter(!(Station %in% ST))
+
+```
+
+# Panel Data Model
+
+```{r}
+
+pData <- pdata.frame(x = data, index = c("Station", "Date"))
+
+Model_01 <- plm(
+  formula = Land_Based_Precip ~ ERA5_Precip + ERA5_Land_Precip + PERSIANN_CDR_Precip
+ + CHIRPS_Precip,
+ data = pData,
+ effect = "twoways",
+ model = "within",
+ )
+
+summary(Model_01)
+
+```
+
+# LSDV Model of Panel Data Estimation
+
+```{r}
+
+# data_train_1 <- Test %>% 
+#   filter(Month %in% c(9, 10, 11))
+
+LSDV <- lm(formula = Land_Based_Precip ~ ERA5_Precip + ERA5_Land_Precip + PERSIANN_CDR_Precip +  CHIRPS_Precip + ELEV_SRTM3 + ASPECT_SRTM3 + SLOPE_SRTM3 + LAT + LONG + factor(Date) - 1,
+           data = data)
+
+# Model2 <-  glm(formula = Land_Based_Precip ~ ERA5_Precip + ERA5_Land_Precip + PERSIANN_CDR_Precip +  CHIRPS_Precip + ELEV_SRTM3 + ASPECT_SRTM3 + SLOPE_SRTM3,
+#                data = data_train_1,
+#                family = poisson)
+
+summary(LSDV)
+
+```
+
+```{r}
+
+plot(LSDV$fitted.values, LSDV$model$Land_Based_Precip, xlim = c(0, 500), ylim = c(0, 500))
+
+hydroGOF::gof(sim = Model_01$fitted.values, obs = Model_01$model$Land_Based_Precip)
+
+```
+
+```{r}
+
+Coeff = data.frame(Model_01$residuals) %>% 
+  mutate(ID = row.names(x = data.frame(Model_01$residuals)))
+
+row.names(Coeff) <- NULL
+
+colnames(Coeff) <- c("Coeff", "ID")
+
+Coeff <- Coeff %>% separate(ID, c("Station", "Date"), sep = "-")
+
+data$Date <- as.character(x = data$Date)
+  
+df <- data %>% 
+  left_join(y = Coeff, by = c("Station", "Date")) %>% 
+  mutate(Panel_Data_Precip = Land_Based_Precip - Coeff) %>% 
+  select(Station, Date, Land_Based_Precip, Panel_Data_Precip)
+
+
+plot(df$Land_Based_Precip, df$Panel_Data_Precip, xlim = c(0, 500), ylim = c(0, 500))
+
+```
+
+```{r}
+
+df %>% filter(Station == "ALIGUDARZ") %>% 
+  ggplot() +
+  geom_point(mapping = aes(x=as.factor(Date), y=Land_Based_Precip)) +
+  geom_point(mapping = aes(x=as.factor(Date), y=Panel_Data_Precip), color="red")
+
+```

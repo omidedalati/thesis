@@ -1,0 +1,6 @@
+"0",""
+"0","hydroGOF::gof(sim = Model_01$fitted.values, obs = Model_01$model$Land_Based_Precip)"
+"2","the condition has length > 1 and only the first element will be used"
+"2","Error in me.default(sim, obs, na.rm = na.rm) : 
+  Invalid argument type: 'sim' & 'obs' have to be of class: c('integer', 'numeric', 'ts', 'zoo')
+"

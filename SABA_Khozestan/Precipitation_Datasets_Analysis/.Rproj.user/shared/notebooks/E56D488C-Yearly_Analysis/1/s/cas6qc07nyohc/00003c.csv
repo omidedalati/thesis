@@ -1,0 +1,8 @@
+"0",""
+"0","# hydroGOF::gof(sim = LSDV$fitted.values, obs = LSDV$model$Land_Based_Precip)"
+"0",""
+"0","# hydroGOF::gof(sim = Model_01$residuals, obs = LSDV$model$Land_Based_Precip)"
+"0",""
+"0","d = c(43:56)"
+"0",""
+"0","plot(Model_01$residuals[d] + Train$Land_Based_Precip[d], type = ""l"", col=""red"")"

@@ -1,0 +1,8 @@
+"0",""
+"0","data <- Precip %>% "
+"0","  left_join(y = geeID, by = ""Station"")"
+"0",""
+"0","data <- data %>% "
+"0","  mutate(Date = Year * 100 + Month)"
+"0",""
+"0","data"
